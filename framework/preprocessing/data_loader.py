@@ -195,8 +195,33 @@ def load_pump_data():
         if name.startswith('sensor'): 
             signals.append( ContinousSignal(name, SignalSource.sensor, isInput=True, isOutput=True, 
                                             min_value=train_df[name].min(), max_value=train_df[name].max(),
-                                            mean_value=train_df[name].mean(), std_value=train_df[name].std() ) ) 
- 
+                                            mean_value=train_df[name].mean(), std_value=train_df[name].std() ) )
+    
+    pos = len(train_df)*3//4
+    val_df = train_df.loc[pos:,:]
+    val_df = val_df.reset_index(drop=True)
+    
+    train_df = train_df.loc[:pos,:]
+    train_df = train_df.reset_index(drop=True)
+    return train_df,val_df,test_df,signals
+
+def load_network_swat():
+    z_tr = zipfile.ZipFile('../datasets/SWAT/data/network_train.zip', "r")
+    f_tr = z_tr.open(z_tr.namelist()[0])
+    train_df=pd.read_csv(f_tr)
+    f_tr.close()
+    z_tr.close()
+    
+    z_tr = zipfile.ZipFile('../datasets/SWAT/data/network_test.zip', "r")
+    f_tr = z_tr.open(z_tr.namelist()[0])
+    test_df=pd.read_csv(f_tr)
+    f_tr.close()
+    z_tr.close()
+
+    signals = []
+    for name in train_df:
+            signals.append( DiscreteSignal(name, SignalSource.controller, isInput=True, isOutput=False, 
+                                            values=train_df[name].unique()) )
     
     pos = len(train_df)*3//4
     val_df = train_df.loc[pos:,:]

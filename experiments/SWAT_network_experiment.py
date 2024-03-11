@@ -1,6 +1,6 @@
 import numpy as np
 from framework.models import NSIBF
-from framework.preprocessing.data_loader import load_swat_data
+from framework.preprocessing.data_loader import load_network_swat
 from framework.HPOptimizer.Hyperparameter import UniformIntegerHyperparameter,ConstHyperparameter,\
     UniformFloatHyperparameter
 from framework.HPOptimizer import HPOptimizers
@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 
-train_df,val_df,test_df,signals = load_swat_data()
+train_df,val_df,test_df,signals = load_network_swat()
 
 seqL = 12
 kf = NSIBF(signals, window_length=seqL, input_range=seqL*3)
@@ -24,10 +24,11 @@ x_train = [train_x,train_u]
 y_train = [train_x,train_y]
 
 #set retrain to False to reproduce the results in the paper
-retrain_model = False
+retrain_model = True
 if retrain_model:
     x,u,y = [],[],[]
     for i in range(20):
+        print(f'Data extraction {i+1} of 20')
         r = 0.05*i
         negative_df = negative_sampler.apply_negative_samples(val_df, signals, sample_ratio=r, sample_delta=0.05)
         negative_df = normalize_and_encode_signals(negative_df,signals,scaler='min_max')
@@ -61,18 +62,18 @@ if retrain_model:
 
     optor = HPOptimizers.RandomizedGS(kf, hp_list,x_train, y_train,x_neg,y_neg)
     kf,optHPCfg,bestScore = optor.run(n_searches=10,verbose=1)
-#     kf.save_model('../results/SWAT')
+    kf.save_model('../results/SWAT_network')
     print('optHPCfg',optHPCfg)
     print('bestScore',bestScore)
 else:
-    kf = kf.load_model('../results/SWAT')
+    kf = kf.load_model('../results/SWAT_network')
 
 
 val_df = normalize_and_encode_signals(val_df,signals,scaler='min_max') 
 val_x,val_u,val_y,_ = kf.extract_data(val_df)
 
 test_df = normalize_and_encode_signals(test_df,signals,scaler='min_max')
-test_x,test_u,_,labels = kf.extract_data(test_df,purpose='AD',freq=seqL,label='label')
+test_x,test_u,_,labels = kf.extract_data(test_df,purpose='AD',freq=seqL,label='Tag')
 labels = labels.sum(axis=1)
 labels[labels>0]=1
 
