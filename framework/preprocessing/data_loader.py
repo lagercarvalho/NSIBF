@@ -4,6 +4,7 @@ import random
 import math
 import zipfile
 from .signals import ContinousSignal,DiscreteSignal,SignalSource
+from sklearn.model_selection import train_test_split
 
 
 def _process_model(u, t, noise_std=0.1):
@@ -198,6 +199,39 @@ def load_pump_data():
                                             mean_value=train_df[name].mean(), std_value=train_df[name].std() ) ) 
  
     
+    pos = len(train_df)*3//4
+    val_df = train_df.loc[pos:,:]
+    val_df = val_df.reset_index(drop=True)
+    
+    train_df = train_df.loc[:pos,:]
+    train_df = train_df.reset_index(drop=True)
+    return train_df,val_df,test_df,signals
+
+def load_cissan_data():
+    
+    z_tr = zipfile.ZipFile('../datasets/CISSAN/SCADA_station1.zip', "r")
+    f_tr = z_tr.open(z_tr.namelist()[0])
+    data_df=pd.read_csv(f_tr)
+    f_tr.close()
+    z_tr.close()
+
+    data_df['label'] = 0
+
+    train_df, test_df = train_test_split(data_df, test_size=0.3, shuffle=False)
+
+    discrete = ['Address', 'IOA']
+
+    continuous = ['Value']
+    
+    signals = []
+    for name in discrete:
+        signals.append( DiscreteSignal(name, SignalSource.controller, isInput=True, isOutput=False, 
+                                            values=train_df[name].unique()) )
+    for name in continuous:
+        signals.append( ContinousSignal(name, SignalSource.sensor, isInput=True, isOutput=True, 
+                                            min_value=train_df[name].min(), max_value=train_df[name].max(),
+                                            mean_value=train_df[name].mean(), std_value=train_df[name].std() ) ) 
+
     pos = len(train_df)*3//4
     val_df = train_df.loc[pos:,:]
     val_df = val_df.reset_index(drop=True)
